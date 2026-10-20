@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>你画我猜 · AI 猜画 — 产品需求文档 v0.1</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#f5f6f8; --paper:#fff; --ink:#16181d; --ink2:#3d4350; --muted:#737b8c;
+    --line:#e4e7ec; --accent:#3b6ef6; --accent-soft:#edf2fe; --accent-ink:#274bb0;
+    --warn:#9a6700; --warn-bg:#fff8e6; --warn-line:#f0dda6;
+    --danger:#b42318; --danger-bg:#fef3f2; --ok:#087443; --ok-bg:#eafaf1;
+  }
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font-size:15px; line-height:1.75;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .layout{display:flex; align-items:flex-start; max-width:1240px; margin:0 auto; padding:0 24px}
+  .toc{position:sticky; top:0; flex:0 0 200px; align-self:flex-start; max-height:100vh; overflow:auto; padding:40px 16px 40px 0; font-size:13.5px}
+  .toc h2{font-size:11px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; margin:0 0 10px}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink2); text-decoration:none}
+  .toc a:hover{background:#eceff4; color:var(--ink)}
+  .toc a.sub{padding-left:22px; font-size:12.5px; color:var(--muted)}
+  .doc{flex:1 1 auto; min-width:0; padding:40px 0 90px}
+  .doc-head{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:28px 30px; margin-bottom:20px}
+  .kicker{font-size:12px; letter-spacing:.1em; color:var(--accent); font-weight:700; text-transform:uppercase}
+  .doc-head h1{font-size:29px; margin:8px 0 6px; letter-spacing:-.01em; line-height:1.35}
+  .doc-head .sub{color:var(--muted); font-size:14px; margin:0}
+  .meta{display:flex; flex-wrap:wrap; gap:6px 24px; font-size:13px; color:var(--muted); border-top:1px dashed var(--line); padding-top:14px; margin-top:16px}
+  .meta b{color:var(--ink2); font-weight:600}
+  section{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:26px 30px; margin-bottom:20px}
+  h2.sec{font-size:21px; margin:0 0 10px; letter-spacing:-.01em}
+  .sec-no{color:var(--accent); font-weight:800; margin-right:8px}
+  h3{font-size:16.5px; margin:30px 0 8px; padding-left:11px; border-left:3px solid var(--accent); line-height:1.4}
+  h3:first-of-type{margin-top:20px}
+  h4{font-size:14.5px; margin:18px 0 4px; color:var(--ink2)}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0; padding-left:22px}
+  li{margin:4px 0}
+  code{background:#f2f4f7; border:1px solid var(--line); border-radius:5px; padding:1px 5px; font-size:12.5px; font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  pre{background:#1c1f26; color:#e6e9ef; border-radius:10px; padding:14px 16px; overflow:auto; font-size:12.5px; line-height:1.6; font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  table{width:100%; border-collapse:collapse; font-size:13.5px; margin:12px 0}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top}
+  th{background:#f7f8fa; font-weight:600; color:var(--ink2); white-space:nowrap}
+  .tag{display:inline-block; font-size:11.5px; padding:1px 8px; border-radius:999px; font-weight:700; white-space:nowrap}
+  .t-p0{background:var(--accent-soft); color:var(--accent-ink)}
+  .t-opt{background:#f1f0ff; color:#4b3fbf}
+  .t-no{background:var(--danger-bg); color:var(--danger)}
+  .t-tbd{background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn-line)}
+  .note{border-left:3px solid var(--accent); background:var(--accent-soft); padding:10px 14px; border-radius:0 8px 8px 0; margin:14px 0; font-size:14px}
+  .note.warn{border-left-color:var(--warn); background:var(--warn-bg)}
+  .note.danger{border-left-color:var(--danger); background:var(--danger-bg)}
+  .flow{display:flex; flex-wrap:wrap; align-items:stretch; gap:8px; margin:14px 0}
+  .step{background:#f7f8fa; border:1px solid var(--line); border-radius:9px; padding:8px 12px; font-size:13px; line-height:1.5}
+  .step b{display:block; font-size:10.5px; letter-spacing:.06em; color:var(--muted); font-weight:700; text-transform:uppercase}
+  .arrow{align-self:center; color:#c4c9d4; font-size:15px}
+
+  /* ---------- 交互演示 ---------- */
+  .demo{border:1px solid var(--line); border-radius:12px; overflow:hidden; margin:18px 0; background:#fff; box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .demo-bar{display:flex; align-items:center; gap:6px; padding:9px 13px; background:#f7f8fa; border-bottom:1px solid var(--line); font-size:12.5px; color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#dfe3e9;display:inline-block}
+  .demo-bar .lab{margin-left:8px}
+  .banner{display:none; align-items:flex-start; gap:9px; background:var(--warn-bg); border-bottom:1px solid var(--warn-line); color:var(--warn); font-size:12.5px; padding:9px 13px; line-height:1.55}
+  .banner.on{display:flex}
+  .demo-body{display:grid; grid-template-columns:1.32fr 1fr}
+  @media (max-width:880px){ .demo-body{grid-template-columns:1fr} .toc{display:none} .layout{padding:0 14px} section{padding:20px 16px} }
+  .draw-pane{padding:12px; border-right:1px solid var(--line); display:flex; flex-direction:column; gap:10px; min-width:0}
+  .chat-pane{display:flex; flex-direction:column; min-height:400px; background:#fcfcfd; min-width:0}
+  .toolbar{display:flex; flex-wrap:wrap; align-items:center; gap:5px; padding:6px; border:1px solid var(--line); border-radius:9px; background:#fbfbfc}
+  .sw{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.14); cursor:pointer; padding:0}
+  .sw[aria-pressed="true"]{outline:2px solid var(--accent); outline-offset:1px}
+  .tbtn{font:inherit; font-size:12.5px; padding:4px 9px; border:1px solid var(--line); background:#fff; border-radius:7px; cursor:pointer; color:var(--ink2); white-space:nowrap}
+  .tbtn:hover{background:#f1f3f7}
+  .tbtn:disabled{color:#b6bdc9; background:#fafbfc; cursor:not-allowed}
+  .tbtn:disabled:hover{background:#fafbfc}
+  .tbtn[aria-pressed="true"]{background:var(--accent-soft); border-color:#c6d6fd; color:var(--accent-ink); font-weight:600}
+  .tbtn.armed{background:var(--danger-bg); border-color:#f3c3bf; color:var(--danger); font-weight:600}
+  .tsep{width:1px; height:20px; background:var(--line); margin:0 2px}
+  .canvas-wrap{position:relative; line-height:0}
+  canvas{width:100%; aspect-ratio:800/480; background:#fff; border:1px solid var(--line); border-radius:10px; touch-action:none; cursor:crosshair; display:block}
+  .float-btn{position:absolute; right:12px; bottom:14px; font:inherit; font-size:13.5px; font-weight:700; padding:10px 17px; border-radius:999px; border:none; background:var(--accent); color:#fff; cursor:pointer; box-shadow:0 6px 18px rgba(59,110,246,.32); line-height:1.2}
+  .float-btn.muted{background:#c3cbd8; box-shadow:none}
+  .float-btn:disabled{background:#c3cbd8; box-shadow:none; cursor:progress}
+  .chat-head{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border-bottom:1px solid var(--line); font-size:13px; color:var(--ink2); background:#fff}
+  .chat-head .ttl{font-weight:600}
+  .switch{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; cursor:pointer; user-select:none; color:var(--muted)}
+  .switch input{appearance:none; width:32px; height:18px; border-radius:999px; background:#d5dae2; position:relative; cursor:pointer; transition:.18s; margin:0; flex:0 0 auto}
+  .switch input::after{content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:.18s}
+  .switch input:checked{background:var(--accent)}
+  .switch input:checked::after{transform:translateX(14px)}
+  .msgs{flex:1 1 auto; overflow:auto; padding:14px 12px; display:flex; flex-direction:column; gap:10px; max-height:430px; background:#fcfcfd}
+  .msg{max-width:88%; font-size:13px; line-height:1.62; padding:9px 12px; border-radius:12px; word-break:break-word; white-space:pre-wrap}
+  .msg.user{align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px}
+  .msg.ai{align-self:flex-start; background:#fff; border:1px solid var(--line); border-bottom-left-radius:4px}
+  .msg.ai.typing{color:var(--muted); font-style:italic}
+  .msg.err{align-self:flex-start; background:var(--danger-bg); border:1px solid #f3c3bf; color:var(--danger); max-width:92%}
+  .msg.sys{align-self:center; font-size:12px; color:var(--muted); background:#f1f3f7; border-radius:999px; padding:4px 12px; max-width:92%; text-align:center}
+  .chip{font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px; margin-left:6px; white-space:nowrap}
+  .chip.hi{background:var(--ok-bg); color:var(--ok)}
+  .chip.mid{background:var(--warn-bg); color:var(--warn)}
+  .chip.lo{background:#f1f3f7; color:var(--muted)}
+  .guess-title{font-weight:600}
+  .guess-reason{margin-top:5px; color:var(--ink2)}
+  .msg-foot{margin-top:8px}
+  .retry{font:inherit; font-size:12px; padding:3px 11px; border-radius:999px; border:1px solid #f3c3bf; background:#fff; color:var(--danger); cursor:pointer; font-weight:600}
+  .chat-foot{border-top:1px solid var(--line); padding:10px 12px; background:#fff; display:flex; flex-direction:column; gap:8px}
+  .reveal-row{display:none; gap:6px}
+  .reveal-row.on{display:flex}
+  .input-row{display:flex; gap:6px}
+  .reveal-row input,.input-row input{flex:1 1 auto; min-width:0}
+  input[type=text]{font:inherit; font-size:13px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); outline:none}
+  input[type=text]:focus{border-color:#b9cbfb; box-shadow:0 0 0 3px rgba(59,110,246,.12)}
+  .send-btn{font:inherit; font-size:13px; font-weight:600; padding:8px 15px; border-radius:9px; border:none; background:var(--accent); color:#fff; cursor:pointer; white-space:nowrap}
+  .send-btn:disabled{background:#c3cbd8; cursor:not-allowed}
+  .demo-foot{display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:9px 13px; border-top:1px solid var(--line); background:#f7f8fa; font-size:12px; color:var(--muted)}
+  .ghost{font:inherit; font-size:12px; padding:4px 10px; border:1px dashed #c9d0dc; border-radius:8px; background:#fff; color:var(--ink2); cursor:pointer}
+  .ghost:hover{background:#f1f3f7}
+  @media print{ .toc{display:none} body{background:#fff} section,.doc-head{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc">
+    <h2>目录</h2>
+    <a href="#s1">1 背景与目标</a>
+    <a href="#s2">2 范围</a>
+    <a href="#s3">3 核心流程与产品模型</a>
+    <a href="#s4">4 功能需求</a>
+    <a class="sub" href="#fr01">FR-01 画板与绘画工具</a>
+    <a class="sub" href="#fr02">FR-02 让 AI 猜</a>
+    <a class="sub" href="#fr03">FR-03 多轮对话</a>
+    <a class="sub" href="#fr04">FR-04 揭晓答案（可选）</a>
+    <a class="sub" href="#fr05">FR-05 首次使用与配置引导</a>
+    <a class="sub" href="#fr06">FR-06 异常与恢复</a>
+    <a href="#s5">5 共享规则</a>
+    <a href="#s6">6 附录：技术选型与运行准备</a>
+    <a href="#s7">7 已确认决策</a>
+  </nav>
+
+  <main class="doc">
+    <header class="doc-head">
+      <div class="kicker">Product Requirements Document</div>
+      <h1>你画我猜 · AI 猜画</h1>
+      <p class="sub">一个本地运行的网页：在白板上随手画画，点一下让多模态大模型猜你画的是什么，并围绕这幅画继续对话。</p>
+      <div class="meta">
+        <span><b>版本</b> v0.1</span>
+        <span><b>日期</b> 2026-10-19</span>
+        <span><b>状态</b> 待评审</span>
+        <span><b>类型</b> 全新产品 · 单机单用户</span>
+      </div>
+    </header>
+
+    <!-- ============ 1 ============ -->
+    <section id="s1">
+      <h2 class="sec"><span class="sec-no">1</span>背景与目标</h2>
+      <p>「你画我猜」目前的主流形态要么需要两个人在线（一人画、一人猜），要么依赖游戏内置词库和固定玩法。这两者都有一个共同的进入成本：你需要先约到人，或者先接受一套既定规则。</p>
+      <p>另一方面，具备图像理解能力的多模态大模型已经可以稳定地"看懂"一张简单手绘图并给出判断。这意味着可以存在一种更轻的玩法：<strong>一个人随便画，让模型来猜，并围绕这张图继续对话</strong>。没有对手、没有题库、没有输赢。</p>
+
+      <h4>问题与产品回应</h4>
+      <table>
+        <tr>
+          <th style="width:26%">环节</th>
+          <th>内容</th>
+        </tr>
+        <tr>
+          <td>观察到的需求</td>
+          <td>使用者想随手画一个东西，快速获得一个"被理解"的反馈，而不需要先找到玩伴或接受一套规则。</td>
+        </tr>
+        <tr>
+          <td>受影响的人与时刻</td>
+          <td>使用者本人在碎片时间、想玩一下而身边没有玩伴的时刻。</td>
+        </tr>
+        <tr>
+          <td>产品决策</td>
+          <td>做一个本地运行的单一网页：白板 + 悬浮的「让 AI 猜」+ 对话区。不设账号、不设题库、不设计时与计分。</td>
+        </tr>
+        <tr>
+          <td>预期可观察结果</td>
+          <td>从打开页面到看到 AI 对画作的第一句猜测，除首次配置外不需要任何额外操作；AI 给出猜测后，用户能围绕这张画继续追问并得到针对该画的回应。</td>
+        </tr>
+      </table>
+      <div class="note">本文档不编写任何量化目标（如留存率、平均猜测准确率）。此类数据在无真实使用前不可编造，须以实际使用为准另行补充。</div>
+    </section>
+
+    <!-- ============ 2 ============ -->
+    <section id="s2">
+      <h2 class="sec"><span class="sec-no">2</span>范围</h2>
+      <h4>最小完整旅程</h4>
+      <ul>
+        <li><b>进入条件</b>：浏览器打开本地页面，白板可用，无需登录。</li>
+        <li><b>完成旅程所需的 P0 动作</b>：画画 → 点「让 AI 猜」→ 看到 AI 的猜测 → 就这幅画继续追问 → 清空画布开始新一幅。</li>
+        <li><b>完成证据</b>：对话区出现至少一条由画作触发的 AI 猜测消息；用户的追问得到与该画相关的回应。</li>
+        <li><b>恢复路径</b>：请求失败时，画作内容不丢失，用户可在失败消息上重试。</li>
+      </ul>
+
+      <h4>范围清单</h4>
+      <table>
+        <tr><th style="width:22%">范围</th><th>能力</th></tr>
+        <tr><td><span class="tag t-p0">P0</span></td><td>自由绘画：画笔颜色、笔触粗细、橡皮、撤销、重做、清空</td></tr>
+        <tr><td><span class="tag t-p0">P0</span></td><td>一键让 AI 猜测当前画作，展示猜测结果</td></tr>
+        <tr><td><span class="tag t-p0">P0</span></td><td>就当前画作进行多轮对话，且 AI 每轮都能看到该画</td></tr>
+        <tr><td><span class="tag t-p0">P0</span></td><td>清空画布并开启新会话</td></tr>
+        <tr><td><span class="tag t-opt">P0 可选</span></td><td>揭晓正确答案并让 AI 复盘（默认关闭的开关）</td></tr>
+        <tr><td><span class="tag t-no">不做</span></td><td>账号体系与登录、多人联机对战、题库/随机出题、计时与计分、历史记录与成绩统计、分享链接、画作导出</td></tr>
+      </table>
+      <div class="note warn">上表中的"不做"项是明确排除的，不是暂缓。若后续要加入题库、计时或计分，需要重新评估本文档的核心流程，因为"自由画 + 无计时"是当前玩法的前提。</div>
+    </section>
+
+    <!-- ============ 3 ============ -->
+    <section id="s3">
+      <h2 class="sec"><span class="sec-no">3</span>核心流程与产品模型</h2>
+
+      <h4>用户旅程</h4>
+      <div class="flow">
+        <div class="step"><b>Step 1</b>打开页面，白板就绪</div>
+        <span class="arrow">→</span>
+        <div class="step"><b>Step 2</b>在白板上画一个东西</div>
+        <span class="arrow">→</span>
+        <div class="step"><b>Step 3</b>点「让 AI 猜」</div>
+        <span class="arrow">→</span>
+        <div class="step"><b>Step 4</b>AI 给出一句猜测</div>
+        <span class="arrow">→</span>
+        <div class="step"><b>Step 5</b>就这幅画多轮追问</div>
+        <span class="arrow">→</span>
+        <div class="step"><b>Step 6</b>（可选）揭晓答案，AI 复盘</div>
+        <span class="arrow">→</span>
+        <div class="step"><b>Step 7</b>清空画布，开始新一幅</div>
+      </div>
+
+      <h4>对象定义</h4>
+      <table>
+        <tr><th style="width:16%">对象</th><th>定义</th></tr>
+        <tr><td><b>画作</b></td><td>当前白板上可见的图像内容。它是发送给模型进行识别与讨论的唯一图像来源。</td></tr>
+        <tr><td><b>会话</b></td><td>一幅画 + 一组按时间排序的消息。清空画布即结束当前会话并开启新会话。</td></tr>
+        <tr><td><b>消息</b></td><td>会话中的一条记录，来源为「用户」或「AI」。用户消息可附带画作快照。</td></tr>
+        <tr><td><b>猜测</b></td><td>由「让 AI 猜」触发的一条 AI 消息，内容为 AI 对画作的判断（是什么 + 把握程度 + 简短理由）。</td></tr>
+      </table>
+
+      <h4>会话状态</h4>
+      <table>
+        <tr><th style="width:20%">状态</th><th>进入条件</th><th>可执行操作</th></tr>
+        <tr><td>空画布</td><td>打开页面，或清空后</td><td>绘画；「让 AI 猜」点击后提示先画点东西</td></tr>
+        <tr><td>绘制中</td><td>画布上有任何笔迹</td><td>绘画、撤销、重做、清空、让 AI 猜、发送消息</td></tr>
+        <tr><td>请求中</td><td>已发起模型请求</td><td>可继续绘画、撤销与重做（本轮请求使用发起时刻的画作快照）；不可清空，不可发起新的猜测或发送消息</td></tr>
+        <tr><td>对话中</td><td>已产生至少一条 AI 猜测或 AI 回复</td><td>继续绘画、继续追问、重复让 AI 猜、揭晓答案、清空</td></tr>
+      </table>
+
+      <div class="note">演示：下面是本需求对应的可交互原型。可以在画板上真实作画，点右下角悬浮按钮触发（模拟的）AI 猜测与对话，并切换"揭晓答案"开关。演示区底部的按钮用于查看异常与空状态。<b>演示中的 AI 回复为本地模拟，不调用真实模型。</b></div>
+
+      <div class="demo" id="demo">
+        <div class="demo-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="lab">localhost:3000 — 交互演示（AI 回复为本地模拟，不调用真实模型）</span>
+        </div>
+        <div class="banner" id="banner">
+          <span>▲</span>
+          <span>未检测到模型凭据（ARK_API_KEY）。请按第 6 章完成火山方舟开通与配置，写入 <code>.env.local</code> 后重启本地服务。</span>
+        </div>
+        <div class="demo-body">
+          <div class="draw-pane">
+            <div class="toolbar">
+              <button class="sw" data-color="#16181d" aria-pressed="true" title="黑色"></button>
+              <button class="sw" data-color="#e5484d" aria-pressed="false" title="红色"></button>
+              <button class="sw" data-color="#f76b15" aria-pressed="false" title="橙色"></button>
+              <button class="sw" data-color="#f5c518" aria-pressed="false" title="黄色"></button>
+              <button class="sw" data-color="#30a46c" aria-pressed="false" title="绿色"></button>
+              <button class="sw" data-color="#3b6ef6" aria-pressed="false" title="蓝色"></button>
+              <button class="sw" data-color="#8e4ec6" aria-pressed="false" title="紫色"></button>
+              <button class="sw" data-color="#8b5e34" aria-pressed="false" title="棕色"></button>
+              <span class="tsep"></span>
+              <button class="tbtn sizebtn" data-size="2" aria-pressed="false">细</button>
+              <button class="tbtn sizebtn" data-size="4" aria-pressed="true">中</button>
+              <button class="tbtn sizebtn" data-size="8" aria-pressed="false">粗</button>
+              <button class="tbtn sizebtn" data-size="16" aria-pressed="false">特粗</button>
+              <span class="tsep"></span>
+              <button class="tbtn" id="penBtn" aria-pressed="true">画笔</button>
+              <button class="tbtn" id="eraseBtn" aria-pressed="false">橡皮</button>
+              <span class="tsep"></span>
+              <button class="tbtn" id="undoBtn" disabled>撤销</button>
+              <button class="tbtn" id="redoBtn" disabled>重做</button>
+              <button class="tbtn" id="clearBtn">清空</button>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="cv"></canvas>
+              <button class="float-btn" id="guessBtn">让 AI 猜</button>
+            </div>
+          </div>
+          <div class="chat-pane">
+            <div class="chat-head">
+              <span class="ttl">对话</span>
+              <label class="switch"><input type="checkbox" id="revealToggle"><span>揭晓答案</span></label>
+            </div>
+            <div class="msgs" id="msgs"></div>
+            <div class="chat-foot">
+              <div class="reveal-row" id="revealRow">
+                <input type="text" id="revealInput" maxlength="200" placeholder="我画的是……（提交后 AI 会复盘）">
+                <button class="send-btn" id="revealBtn">揭晓</button>
+              </div>
+              <div class="input-row">
+                <input type="text" id="chatInput" maxlength="200" placeholder="就这幅画继续追问……">
+                <button class="send-btn" id="sendBtn" disabled>发送</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-foot">
+          <span>演示其他状态：</span>
+          <button class="ghost" id="simErr">模拟网络失败</button>
+          <button class="ghost" id="simCfg">模拟未配置凭据</button>
+          <button class="ghost" id="simEmpty">模拟空画布拦截</button>
+          <button class="ghost" id="simReset">重置演示</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 ============ -->
+    <section id="s4">
+      <h2 class="sec"><span class="sec-no">4</span>功能需求</h2>
+
+      <!-- FR-01 -->
+      <h3 id="fr01">FR-01 画板与绘画工具 <span class="tag t-p0">P0</span></h3>
+      <p><b>目的</b>：让用户用最低的操作成本把心里的东西画出来，且画出来的图能清晰传达给模型。</p>
+      <p><b>布局</b>：页面主体为画板；工具栏紧贴画板上方，包含颜色、粗细、工具、撤销/重做、清空五组控件；「让 AI 猜」为悬浮在画板右下角的常驻按钮。</p>
+
+      <h4>字段与默认值</h4>
+      <table>
+        <tr><th style="width:20%">字段</th><th style="width:34%">可选值与默认</th><th>说明</th></tr>
+        <tr><td>画笔颜色</td><td>预设 8 色（黑/红/橙/黄/绿/蓝/紫/棕）；默认黑色</td><td>选择颜色会同时把当前工具切回画笔</td></tr>
+        <tr><td>笔触粗细</td><td>细（2）/ 中（4）/ 粗（8）/ 特粗（16）；默认中</td><td>橡皮的擦除宽度为当前粗细的 4 倍</td></tr>
+        <tr><td>工具</td><td>画笔 / 橡皮；默认画笔</td><td>橡皮以背景色擦除，结果为白色背景</td></tr>
+      </table>
+
+      <h4>处理规则</h4>
+      <ul>
+        <li>从按下到抬起之间连续移动形成<b>一条笔迹</b>，一次点击（未移动）生成一个圆点。</li>
+        <li>「撤销」回退最近一条笔迹，可连续回退至画布为空；被撤销的笔迹进入重做栈。</li>
+        <li>「重做」恢复最近一条被撤销的笔迹，可连续恢复至撤销前的状态。撤销与重做两条按钮在无可操作内容时呈不可用样式。</li>
+        <li><b>撤销后重新落笔会清空重做栈</b>：此时之前的笔迹无法再被重做，与常见绘画工具的行为一致。</li>
+        <li>「清空」同时清空撤销栈与重做栈，因此清空后无法撤销回上一步。</li>
+        <li>「清空」需二次确认：首次点击按钮变为「确认清空？」，3 秒内再次点击才真正清空，否则自动还原。</li>
+        <li>清空画布的副作用见第 5 章「会话生命周期」。</li>
+        <li>画板使用固定的逻辑画布尺寸并等比缩放显示，窗口尺寸变化时只改变显示大小，不改变画作内容与其相对位置。</li>
+      </ul>
+
+      <h4>交互与状态</h4>
+      <ul>
+        <li>鼠标与触屏使用同一套指针交互，触屏绘画不触发页面滚动。</li>
+        <li>画布为空时，「让 AI 猜」按钮呈不可用样式，点击后提示「先画点什么，再让 AI 猜。」（不发起请求）</li>
+        <li>画布非空时，按钮恢复常态并可点击。</li>
+      </ul>
+      <p class="note"><b>画布逻辑分辨率：800 × 480</b>（约 5:3），已确认。画作按此尺寸绘制并等比缩放显示；提交给模型的图片由该逻辑画布直接导出，不做额外缩放。</p>
+
+      <!-- FR-02 -->
+      <h3 id="fr02">FR-02 让 AI 猜（提交画作） <span class="tag t-p0">P0</span></h3>
+      <p><b>目的</b>：把画作交给模型，得到一句「它认为你画的是什么」的判断。</p>
+      <p><b>触发</b>：用户点击画板右下角的悬浮按钮「让 AI 猜」。前置条件为画布非空且当前没有进行中的请求。任何用户（本产品无角色区分）均可触发。</p>
+
+      <h4>处理规则</h4>
+      <ul>
+        <li>提交时导出的是<b>当前画布内容</b>，不包含工具栏、按钮、对话区等任何界面元素；导出格式为 PNG，白底不透明。</li>
+        <li>首次点击使用固定提示：要求模型用一句话说出画的是什么，并给出把握程度（高 / 中 / 低）与一句简短理由；禁止输出长篇分析。</li>
+        <li>同一幅画可以重复提交。首次猜测之后，按钮文案变为「再猜一次」，每次提交生成一条新的 AI 猜测消息。</li>
+        <li>请求进行中按钮不可用，文案显示为「AI 正在看图…」。此时用户仍可在画板上继续画，但本轮提交使用的是点击时刻的画面。</li>
+      </ul>
+
+      <h4>结果与状态变化</h4>
+      <ul>
+        <li>AI 猜测以一条 AI 消息追加到对话区，样式上包含：猜测结论、把握程度标签、简短理由。</li>
+        <li>画作内容不变；会话进入「对话中」状态。</li>
+        <li>对话区自动滚动到最新消息。</li>
+      </ul>
+
+      <h4>异常</h4>
+      <ul>
+        <li>请求失败：在对话区显示错误消息，说明失败类型，并提供「重试」；重试使用<b>当前</b>画作内容重新提交。</li>
+        <li>请求进行中重复点击：不产生任何效果。</li>
+      </ul>
+
+      <!-- FR-03 -->
+      <h3 id="fr03">FR-03 多轮对话（保持视觉上下文） <span class="tag t-p0">P0</span></h3>
+      <p><b>目的</b>：让用户能就这幅画继续追问，例如「你为什么觉得是猫？」「哪个部分最像？」，并得到针对该画的回应。</p>
+      <p><b>触发</b>：用户在底部输入框输入文本后按回车或点击「发送」。前置条件为文本非空且没有进行中的请求。</p>
+
+      <h4>处理规则</h4>
+      <ul>
+        <li><b>每轮请求都必须附带画作图片</b>，而不是只在首轮发送。这样 AI 在整个会话中始终"看得见"这张画。</li>
+        <li>每轮携带的图片是<b>发起请求时刻画布的最新快照</b>。如果用户在对话过程中修改了画，后续轮次使用修改后的版本，不保留历史版本，也不提示"画已变更"。</li>
+        <li>请求携带的文字历史为<b>最近 2 轮</b>对话（见 FR-03 字段与限制），顺序为：系统提示 → 最近 2 轮历史消息 → 本轮用户消息；图片只带当前一张。</li>
+        <li>用户消息立即上屏，AI 回复在返回后上屏。回复期间发送按钮不可用。</li>
+        <li>AI 回复以纯文本展示，保持与用户消息一致的换行与缩进。</li>
+      </ul>
+
+      <h4>字段与限制</h4>
+      <table>
+        <tr><th style="width:24%">项</th><th>规则</th></tr>
+        <tr><td>单条输入长度</td><td>上限 200 字，超出部分不可继续输入 <span class="tag t-tbd">[Assumption]</span></td></tr>
+        <tr><td>会话消息保留</td><td>本地个人使用，默认全量保留</td></tr>
+        <tr><td>上文超长处理</td><td>发送给模型的文字历史只携带<b>最近 2 轮</b>对话（一轮 = 一条用户消息 + 其后的 AI 回复），更早的消息仍显示在界面上但不参与请求。若最近 2 轮仍超出模型上下文上限，则继续丢弃更早的轮次。系统提示与当前画作图片在任何情况下都必须保留</td></tr>
+      </table>
+
+      <!-- FR-04 -->
+      <h3 id="fr04">FR-04 揭晓正确答案（可选） <span class="tag t-opt">P0 可选</span></h3>
+      <p><b>目的</b>：给自由画玩法补上一个"揭晓"环节，让 AI 知道自己猜得对不对，从而产生更有意思的复盘。</p>
+      <p><b>触发</b>：用户打开对话区顶部的「揭晓答案」开关。</p>
+      <h4>处理规则</h4>
+      <ul>
+        <li>开关默认<b>关闭</b>。关闭状态下，界面不出现任何揭晓入口，用户也不会感知到该功能存在。</li>
+        <li>打开后，对话区底部出现输入行：「我画的是 ____」+「揭晓」按钮。</li>
+        <li>提交后，内容以用户消息形式发送（显示为「我画的是：XXX」），AI 基于正确答案复盘：指出此前误认的部分与可能的原因。例如"原来是一把伞，我把伞面看成了月亮。"</li>
+        <li>只保留一个答案。再次提交会以新答案重新复盘，历史消息不删除。</li>
+        <li>关闭开关不会删除已经产生的消息；再次打开时输入框为空。</li>
+        <li>清空画布时，开关重置为关闭。</li>
+      </ul>
+
+      <!-- FR-05 -->
+      <h3 id="fr05">FR-05 首次使用与配置引导 <span class="tag t-p0">P0</span></h3>
+      <p><b>目的</b>：用户是第一次接触火山方舟时，不至于看到一个无从下手的空白页面。</p>
+      <h4>处理规则</h4>
+      <ul>
+        <li>页面加载时检测模型凭据是否就绪。未就绪时，页面顶部常驻一条提示条，内容包含：缺少的环境变量名称、配置步骤的位置指引（对应本文档第 6 章）。</li>
+        <li>未就绪状态下点击「让 AI 猜」不发起任何网络请求，直接在对话区提示「未检测到模型凭据（ARK_API_KEY）」，并高亮顶部提示条。</li>
+        <li>绘画与对话输入仍然可用（用户可以先把画准备出来），但发送消息同样会被拦截并给出相同提示。</li>
+        <li>凭据补齐后需要重启本地服务才会生效；页面提供"重启后会自动消失"的说明。</li>
+      </ul>
+      <div class="note">可用演示区底部「模拟未配置凭据」查看该状态。</div>
+
+      <!-- FR-06 -->
+      <h3 id="fr06">FR-06 异常与恢复 <span class="tag t-p0">P0</span></h3>
+      <p>所有失败都以"不丢失用户已有内容"为前提：画作与输入框内容必须保留。</p>
+      <table>
+        <tr><th style="width:22%">失败类型</th><th>展示内容</th><th>用户可做的下一步</th></tr>
+        <tr>
+          <td>未配置凭据</td>
+          <td>「未检测到模型凭据（ARK_API_KEY）」，伴随顶部提示条</td>
+          <td>按第 6 章完成配置并重启服务</td>
+        </tr>
+        <tr>
+          <td>鉴权失败 / 额度不足</td>
+          <td>「模型凭据无效或额度已用尽」，附服务端返回的可读原因</td>
+          <td>到控制台检查 Key 与余额后重试</td>
+        </tr>
+        <tr>
+          <td>网络中断 / 超时</td>
+          <td>「请求失败：连接超时」，附「重试」</td>
+          <td>点击重试，使用当前画作重新提交</td>
+        </tr>
+        <tr>
+          <td>服务端异常</td>
+          <td>「服务异常，请稍后重试」，附「重试」</td>
+          <td>重试；连续失败时提示查看本地服务日志</td>
+        </tr>
+        <tr>
+          <td>模型返回为空 / 拒答</td>
+          <td>「AI 这次没有给出判断，可以再试一次」</td>
+          <td>重试，或换一种更清楚的方式画</td>
+        </tr>
+      </table>
+      <p class="note">错误消息直接出现在对话流中对应的位置，而不是弹窗，以保证用户能立刻看到失败的上下文。</p>
+    </section>
+
+    <!-- ============ 5 ============ -->
+    <section id="s5">
+      <h2 class="sec"><span class="sec-no">5</span>共享规则</h2>
+
+      <h4>会话生命周期</h4>
+      <p>清空画布是结束会话的唯一动作，须经二次确认。确认清空后依次发生：</p>
+      <ol>
+        <li>画板内容清空，回到「空画布」状态；</li>
+        <li>对话区消息全部清除，并插入一条系统提示「新会话已开始 · 画完后点击画板右下角「让 AI 猜」」；</li>
+        <li>「让 AI 猜」按钮文案与状态重置；「揭晓答案」开关复位为关闭。</li>
+      </ol>
+      <div class="note danger">没有"保存草稿"或"恢复上一幅画"，清空是<b>不可逆</b>的，这正是二次确认存在的原因。</div>
+
+      <h4>画作快照规则（唯一权威定义）</h4>
+      <p>凡是需要把画作交给模型的动作（首轮猜测、再次猜测、每轮对话、复盘），一律使用<b>发起该次请求时刻画布的最新内容</b>，导出为不含界面元素的 PNG。系统不缓存历史画作版本，也不记录"第几版画"。FR-02 与 FR-03 中的相关描述均指向本条。</p>
+
+      <h4>请求并发规则</h4>
+      <p>同一时刻只允许一个进行中的模型请求。请求进行中：「让 AI 猜」按钮与「发送」/「揭晓」按钮不可用；画板仍可操作；输入框仍可编辑，但发送被禁止。</p>
+
+      <h4>上下文组装规则</h4>
+      <p>每次请求的组成固定为：系统提示 + <b>最近 2 轮</b>历史消息 + 本轮用户消息 + <b>当前画作快照一张</b>。历史轮次中的旧画作图片<b>不重复携带</b>，只用当前这一张；文字历史超出 2 轮的部分丢弃。任何情况下都不得丢弃系统提示与当前画作图片。</p>
+
+      <h4>凭据与安全边界</h4>
+      <ul>
+        <li>模型 API Key 仅存在于服务端环境变量中，浏览器端任何时刻都不接触 Key。</li>
+        <li>浏览器只与本项目的本地服务通信，由本地服务转发到模型服务。</li>
+        <li>承载 Key 的配置文件不得提交到版本库。</li>
+      </ul>
+    </section>
+
+    <!-- ============ 6 ============ -->
+    <section id="s6">
+      <h2 class="sec"><span class="sec-no">6</span>附录：技术选型与运行准备</h2>
+      <div class="note">本章记录已确认的技术决策与首次使用前的准备步骤。它不属于产品行为定义，但用户明确要求把这部分写清。</div>
+
+      <h4>已确认的技术选型</h4>
+      <table>
+        <tr><th style="width:22%">项</th><th>选型</th><th>理由</th></tr>
+        <tr><td>应用形态</td><td>Next.js 全栈（App Router + TypeScript）</td><td>前端页面与后端代理在同一项目内，一条命令即可运行，部署路径简单</td></tr>
+        <tr><td>白板实现</td><td>浏览器原生 Canvas 2D + Pointer Events</td><td>绘画需求简单，无需引入绘图库；Pointer Events 同时覆盖鼠标与触屏</td></tr>
+        <tr><td>后端</td><td>Next.js Route Handler 作为模型请求代理</td><td>Key 留在服务端，前端无法盗用</td></tr>
+        <tr><td>模型</td><td>豆包视觉理解模型（火山方舟 ARK，OpenAI 兼容接口）</td><td>国内直连无需代理，具备图像理解能力，按量计费成本低</td></tr>
+        <tr><td>凭据管理</td><td>服务端环境变量 <code>.env.local</code></td><td>本地运行，不进入版本库</td></tr>
+      </table>
+
+      <h4>火山方舟开通与接入步骤</h4>
+      <p>当前尚未申请，按以下顺序操作：</p>
+      <ol>
+        <li>注册并登录火山引擎控制台，完成<b>实名认证</b>（未实名无法开通模型服务）。</li>
+        <li>在控制台中找到并开通<b>火山方舟（ARK）</b>服务。</li>
+        <li>进入方舟的模型广场 / 开通管理，开通一个<b>支持图片输入的视觉理解模型</b>（豆包视觉理解系列）。注意：纯文本模型无法完成"猜画"。</li>
+        <li>创建 <b>API Key</b>，得到形如 <code>ark-xxxxxxxx</code> 的密钥。该 Key 只在创建时完整可见，请立即保存。</li>
+        <li>记录要使用的<b>模型 ID</b>。可直接使用模型广场中该模型的 ID；也可在方舟中创建推理接入点并使用其 <code>ep-</code> 开头的端点 ID。</li>
+        <li>在项目根目录创建 <code>.env.local</code>，写入以下两项：</li>
+      </ol>
+      <pre>ARK_API_KEY=ark-xxxxxxxxxxxxxxxxxxxx
+# 视觉理解模型 ID，以控制台模型广场为准
+ARK_MODEL=doubao-seed-2-1-pro-260628</pre>
+      <ol start="7">
+        <li>确认 <code>.env.local</code> 已被 <code>.gitignore</code> 忽略。</li>
+      </ol>
+
+      <h4>接口要点</h4>
+      <table>
+        <tr><th style="width:22%">项</th><th>值</th></tr>
+        <tr><td>Base URL</td><td><code>https://ark.cn-beijing.volces.com/api/v3</code></td></tr>
+        <tr><td>鉴权头</td><td><code>Authorization: Bearer &lt;ARK_API_KEY&gt;</code></td></tr>
+        <tr><td>接口</td><td>OpenAI 兼容的 chat/completions，消息内容中以 <code>image_url</code> 传入图片（data URL 形式的 PNG）</td></tr>
+        <tr><td>模型 ID</td><td>由 <code>ARK_MODEL</code> 指定，须为支持图片输入的视觉理解模型；具体值以控制台模型广场为准</td></tr>
+      </table>
+      <div class="note warn">模型 ID 会随方舟的模型迭代而变化。上面给出的示例值仅用于说明格式，实际以你在控制台看到的为准，不要照抄。</div>
+
+      <h4>本地运行</h4>
+      <ol>
+        <li>确认 Node.js 版本满足 Next.js 要求（≥ 18）。</li>
+        <li>在项目目录执行 <code>npm install</code>。</li>
+        <li>在项目目录执行 <code>npm run dev</code>。</li>
+        <li>浏览器访问 <code>http://localhost:3000</code>。</li>
+      </ol>
+    </section>
+
+    <!-- ============ 7 ============ -->
+    <section id="s7">
+      <h2 class="sec"><span class="sec-no">7</span>已确认决策</h2>
+      <p>以下三项在评审中已确认，作为实现依据。</p>
+      <table>
+        <tr><th style="width:12%">编号</th><th style="width:26%">决策项</th><th>结论</th></tr>
+        <tr>
+          <td>D-01</td>
+          <td>画布逻辑分辨率</td>
+          <td>固定为 <b>800 × 480</b>；显示时等比缩放，导出给模型时使用该逻辑尺寸。</td>
+        </tr>
+        <tr>
+          <td>D-02</td>
+          <td>对话上下文保留轮数</td>
+          <td>发送给模型的历史文字只保留<b>最近 2 轮</b>；界面消息不受影响。</td>
+        </tr>
+        <tr>
+          <td>D-03</td>
+          <td>重做</td>
+          <td>提供「重做」按钮，与「撤销」成对；撤销后重新落笔清空重做栈。</td>
+        </tr>
+      </table>
+      <div class="note">其余未明确处已在文中以 <span class="tag t-tbd">[Assumption]</span> 标注（目前仅剩输入长度上限 200 字），实现时按标注的默认值执行即可。</div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============ 画板 ============ */
+  var canvas = document.getElementById('cv');
+  var ctx = canvas.getContext('2d');
+  var LW = 800, LH = 480;
+  var dpr = 1, scale = 1;
+  var strokes = [];
+  var redoStack = [];
+  var drawing = false, current = null;
+  var tool = 'pen', color = '#16181d', size = 4;
+  var busy = false;
+  var guessed = false, lastGuessName = '';
+  var unconfigured = false;
+  var sessionId = 0;
+
+  function applyTransform() { ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); }
+
+  function fit() {
+    var r = canvas.getBoundingClientRect();
+    if (!r.width) return;
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+    scale = r.width / LW;
+    redraw();
+  }
+
+  function redraw() {
+    applyTransform();
+    ctx.clearRect(0, 0, LW, LH);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, LW, LH);
+    for (var i = 0; i < strokes.length; i++) drawStroke(strokes[i]);
+  }
+
+  function styleFor(s) {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = s.color;
+    ctx.fillStyle = s.color;
+    ctx.lineWidth = s.size;
+  }
+
+  function drawStroke(s) {
+    styleFor(s);
+    if (s.points.length === 1) {
+      ctx.beginPath();
+      ctx.arc(s.points[0].x, s.points[0].y, s.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(s.points[0].x, s.points[0].y);
+    for (var i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+    ctx.stroke();
+  }
+
+  function segment(s, a, b) {
+    styleFor(s);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  function toLogical(e) {
+    var r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * LW, y: (e.clientY - r.top) / r.height * LH };
+  }
+
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    drawing = true;
+    var s = {
+      color: tool === 'eraser' ? '#ffffff' : color,
+      size: tool === 'eraser' ? size * 4 : size,
+      points: [toLogical(e)]
+    };
+    strokes.push(s);
+    redoStack = [];
+    current = s;
+    drawStroke(s);
+    syncHistory();
+    syncGuess();
+  });
+
+  canvas.addEventListener('pointermove', function (e) {
+    if (!drawing || !current) return;
+    e.preventDefault();
+    var p = toLogical(e);
+    var prev = current.points[current.points.length - 1];
+    current.points.push(p);
+    segment(current, prev, p);
+  });
+
+  function endStroke() { drawing = false; current = null; }
+  canvas.addEventListener('pointerup', endStroke);
+  canvas.addEventListener('pointercancel', endStroke);
+
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(canvas);
+  window.addEventListener('resize', fit);
+
+  /* ============ 工具栏 ============ */
+  var swatches = document.querySelectorAll('.sw');
+  Array.prototype.forEach.call(swatches, function (b) {
+    b.style.background = b.getAttribute('data-color');
+    b.addEventListener('click', function () {
+      color = b.getAttribute('data-color');
+      tool = 'pen';
+      Array.prototype.forEach.call(swatches, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      syncTool();
+    });
+  });
+
+  var sizeBtns = document.querySelectorAll('.sizebtn');
+  Array.prototype.forEach.call(sizeBtns, function (b) {
+    b.addEventListener('click', function () {
+      size = Number(b.getAttribute('data-size'));
+      Array.prototype.forEach.call(sizeBtns, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    });
+  });
+
+  var penBtn = document.getElementById('penBtn');
+  var eraseBtn = document.getElementById('eraseBtn');
+  function syncTool() {
+    penBtn.setAttribute('aria-pressed', String(tool === 'pen'));
+    eraseBtn.setAttribute('aria-pressed', String(tool === 'eraser'));
+    canvas.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+  }
+  penBtn.addEventListener('click', function () { tool = 'pen'; syncTool(); });
+  eraseBtn.addEventListener('click', function () { tool = 'eraser'; syncTool(); });
+
+  var undoBtn = document.getElementById('undoBtn');
+  var redoBtn = document.getElementById('redoBtn');
+
+  function syncHistory() {
+    undoBtn.disabled = strokes.length === 0;
+    redoBtn.disabled = redoStack.length === 0;
+  }
+
+  undoBtn.addEventListener('click', function () {
+    if (!strokes.length) return;
+    redoStack.push(strokes.pop());
+    redraw();
+    syncHistory();
+    syncGuess();
+  });
+
+  redoBtn.addEventListener('click', function () {
+    if (!redoStack.length) return;
+    strokes.push(redoStack.pop());
+    redraw();
+    syncHistory();
+    syncGuess();
+  });
+
+  var clearBtn = document.getElementById('clearBtn');
+  var clearArmed = false, clearTimer = null;
+  function disarmClear() {
+    clearArmed = false;
+    clearBtn.classList.remove('armed');
+    clearBtn.textContent = '清空';
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+  }
+  clearBtn.addEventListener('click', function () {
+    if (busy) return;
+    if (!clearArmed) {
+      clearArmed = true;
+      clearBtn.classList.add('armed');
+      clearBtn.textContent = '确认清空？';
+      clearTimer = setTimeout(disarmClear, 3000);
+      return;
+    }
+    disarmClear();
+    strokes = [];
+    redoStack = [];
+    redraw();
+    resetSession();
+    syncHistory();
+    syncGuess();
+  });
+
+  /* ============ 对话区 ============ */
+  var msgsEl = document.getElementById('msgs');
+  var chatInput = document.getElementById('chatInput');
+  var sendBtn = document.getElementById('sendBtn');
+  var revealToggle = document.getElementById('revealToggle');
+  var revealRow = document.getElementById('revealRow');
+  var revealInput = document.getElementById('revealInput');
+  var revealBtn = document.getElementById('revealBtn');
+  var guessBtn = document.getElementById('guessBtn');
+  var banner = document.getElementById('banner');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function append(html, cls) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + cls;
+    d.innerHTML = html;
+    msgsEl.appendChild(d);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return d;
+  }
+
+  function pushSys(t) { return append(esc(t), 'sys'); }
+  function pushTyping(label) { return append(esc(label), 'ai typing'); }
+
+  var canned = [
+    { name: '一只猫', conf: '中', chip: 'mid', reason: '圆形的头部轮廓和两侧的耳朵形状比较明显。' },
+    { name: '一棵树', conf: '低', chip: 'lo', reason: '能看出一条竖直的线和上方的团状结构，但也可能只是随手的涂鸦。' },
+    { name: '一张脸', conf: '高', chip: 'hi', reason: '有明显的两个点和一条横向的曲线，符合五官的排布。' },
+    { name: '一个太阳', conf: '中', chip: 'mid', reason: '中心的圆形比较完整，外侧有放射状的短线。' },
+    { name: '一座房子', conf: '低', chip: 'lo', reason: '下方是方形轮廓，上方似乎有个三角形的顶，但线条不太确定。' },
+    { name: '一只鸟', conf: '中', chip: 'mid', reason: '整体轮廓左右对称，两侧像有张开的翅膀。' }
+  ];
+
+  var replies = [
+    '从线条看，最像的是中间那个轮廓；如果那里再加一点细节，我会更有把握。',
+    '我注意到左侧有一条较长的弧线，它可能是主体的一部分，也可能只是背景。',
+    '如果你觉得我猜错了，可以再画具体一些，比如加上内部结构或者一个比例参照物。',
+    '这幅画能给我的信息不多，所以我的把握只有中等。你也可以直接告诉我一些线索。'
+  ];
+
+  function pushGuess(g) {
+    lastGuessName = g.name;
+    var d = append(
+      '<div class="guess-title">我猜这是：' + esc(g.name) +
+      '<span class="chip ' + g.chip + '">把握 ' + esc(g.conf) + '</span></div>' +
+      '<div class="guess-reason">' + esc(g.reason) + '</div>',
+      'ai'
+    );
+    return d;
+  }
+
+  /* ---- 状态同步 ---- */
+  function syncGuess() {
+    var has = strokes.length > 0;
+    guessBtn.disabled = busy;
+    guessBtn.classList.toggle('muted', !has && !busy);
+    if (!busy) guessBtn.textContent = guessed ? '再猜一次' : '让 AI 猜';
+  }
+  function syncSend() {
+    sendBtn.disabled = busy || !chatInput.value.trim();
+    revealBtn.disabled = busy;
+  }
+  function setBusy(v, btnLabel) {
+    busy = v;
+    if (v && btnLabel) guessBtn.textContent = btnLabel;
+    syncGuess();
+    syncSend();
+  }
+
+  /* ---- 让 AI 猜 ---- */
+  guessBtn.addEventListener('click', function () {
+    if (busy) return;
+    if (!strokes.length) { pushSys('先画点什么，再让 AI 猜。'); return; }
+    if (unconfigured) {
+      pushSys('未检测到模型凭据（ARK_API_KEY），请先完成配置后重启本地服务。');
+      banner.classList.add('on');
+      return;
+    }
+    runGuess();
+  });
+
+  function runGuess() {
+    setBusy(true, 'AI 正在看图…');
+    var typing = pushTyping('AI 正在看图…');
+    var sid = sessionId;
+    setTimeout(function () {
+      if (sid !== sessionId) { typing.remove(); setBusy(false); return; }
+      typing.remove();
+      var g = canned[(strokes.length - 1) % canned.length];
+      pushGuess(g);
+      guessed = true;
+      setBusy(false);
+      syncGuess();
+    }, 1100);
+  }
+
+  /* ---- 对话 ---- */
+  function send() {
+    if (busy) return;
+    var t = chatInput.value.trim();
+    if (!t) return;
+    if (unconfigured) {
+      pushSys('未检测到模型凭据（ARK_API_KEY），消息未发送。');
+      banner.classList.add('on');
+      return;
+    }
+    append(esc(t), 'user');
+    chatInput.value = '';
+    syncSend();
+    setBusy(true, 'AI 正在看图…');
+    var typing = pushTyping('AI 正在想…');
+    var sid = sessionId;
+    setTimeout(function () {
+      if (sid !== sessionId) { typing.remove(); setBusy(false); return; }
+      typing.remove();
+      append(esc(replies[t.length % replies.length]), 'ai');
+      setBusy(false);
+      syncGuess();
+    }, 900);
+  }
+
+  chatInput.addEventListener('input', syncSend);
+  chatInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+  });
+  sendBtn.addEventListener('click', send);
+
+  /* ---- 揭晓答案 ---- */
+  revealToggle.addEventListener('change', function () {
+    revealRow.classList.toggle('on', revealToggle.checked);
+    if (revealToggle.checked) revealInput.focus();
+  });
+
+  revealBtn.addEventListener('click', function () {
+    if (busy) return;
+    var a = revealInput.value.trim();
+    if (!a) return;
+    append('我画的是：' + esc(a), 'user');
+    revealInput.value = '';
+    setBusy(true, 'AI 正在看图…');
+    var typing = pushTyping('AI 正在复盘…');
+    var sid = sessionId;
+    setTimeout(function () {
+      if (sid !== sessionId) { typing.remove(); setBusy(false); return; }
+      typing.remove();
+      append('原来是「' + esc(a) + '」。我之前把它认成了「' + esc(lastGuessName || '别的东西') +
+             '」，主要是把其中一部分轮廓看成了另一个形状。下次可以试着把这一部分画得更明确一些。', 'ai');
+      setBusy(false);
+      syncGuess();
+    }, 900);
+  });
+
+  /* ---- 会话重置 ---- */
+  function resetSession() {
+    sessionId++;
+    msgsEl.innerHTML = '';
+    guessed = false;
+    lastGuessName = '';
+    revealToggle.checked = false;
+    revealRow.classList.remove('on');
+    revealInput.value = '';
+    chatInput.value = '';
+    pushSys('新会话已开始 · 画完后点击画板右下角「让 AI 猜」');
+    syncGuess();
+    syncSend();
+  }
+
+  /* ---- 演示用：其他状态 ---- */
+  document.getElementById('simErr').addEventListener('click', function () {
+    var d = append('请求失败：连接超时。画作与输入已保留。', 'err');
+    var foot = document.createElement('div');
+    foot.className = 'msg-foot';
+    var b = document.createElement('button');
+    b.className = 'retry';
+    b.textContent = '重试';
+    b.addEventListener('click', function () {
+      d.remove();
+      if (strokes.length) runGuess();
+      else pushSys('先画点什么，再让 AI 猜。');
+    });
+    foot.appendChild(b);
+    d.appendChild(foot);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  });
+
+  document.getElementById('simCfg').addEventListener('click', function () {
+    unconfigured = !unconfigured;
+    banner.classList.toggle('on', unconfigured);
+    pushSys(unconfigured ? '已模拟：模型凭据未配置状态。' : '已模拟：模型凭据已配置状态。');
+  });
+
+  document.getElementById('simEmpty').addEventListener('click', function () {
+    if (!strokes.length) pushSys('先画点什么，再让 AI 猜。');
+    else pushSys('当前画布非空。空画布拦截只在未落笔时触发，请先用「清空」回到空状态。');
+  });
+
+  document.getElementById('simReset').addEventListener('click', function () {
+    disarmClear();
+    unconfigured = false;
+    banner.classList.remove('on');
+    strokes = [];
+    redoStack = [];
+    redraw();
+    guessed = false;
+    resetSession();
+    syncHistory();
+    syncGuess();
+  });
+
+  /* ---- 初始化 ---- */
+  syncTool();
+  requestAnimationFrame(function () {
+    fit();
+    resetSession();
+    syncHistory();
+    syncGuess();
+    syncSend();
+  });
+})();
+</script>
+</body>
+</html>
